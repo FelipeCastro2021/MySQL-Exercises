@@ -255,3 +255,117 @@ add column imc decimal(5, 2);
 
 update pessoas
 set imc = peso / (altura * altura);
+
+# Exibir a lista de cursos assistidos por pessoas de nacionalidades específicas: 
+# Exiba a lista de cursos assistidos por pessoas com nacionalidade "Brasil" ou "Portugal".
+select c.nome, p.nome, p.nacionalidade
+from cursos as c
+inner join gafanhoto_assiste_curso gac on gac.idcurso = c.idcurso
+inner join pessoas p on p.id = gac.idgafanhoto
+where p.nacionalidade IN ('Brasil', 'Portugal')
+order by p.nacionalidade;
+
+# Exibir a lista de cursos assistidos por pessoas de nacionalidades específicas: 
+# Exiba a lista de cursos assistidos por pessoas com nacionalidade que não sejam "Brasil" ou "Portugal".
+select c.nome, p.nome, p.nacionalidade
+from cursos as c
+inner join gafanhoto_assiste_curso gac on gac.idcurso = c.idcurso
+inner join pessoas p on p.id = gac.idgafanhoto
+where p.nacionalidade NOT IN ('Brasil', 'Portugal')
+order by p.nacionalidade;
+
+# Exibir a pessoa com maior carga horária acumulada: 
+# Exiba a pessoa que acumulou a maior carga horária ao assistir cursos.
+select p.nome, SUM(c.carga) as carga_total
+from pessoas p
+inner join gafanhoto_assiste_curso gac on gac.idgafanhoto = p.id
+inner join cursos c on c.idcurso = gac.idcurso
+group by p.id
+order by carga_total desc
+limit 1;
+
+# Exibir cursos não assistidos por ninguém: 
+# Usando LEFT JOIN, exiba todos os cursos que não foram assistidos por nenhuma pessoa.
+SELECT c.nome 
+FROM cursos c 
+LEFT JOIN gafanhoto_assiste_curso g ON g.idcurso IS NULL;
+
+# Verificar se todas as pessoas assistiram a todos os cursos: 
+# Verifique se existe alguma pessoa que assistiu a todos os cursos disponíveis.
+SELECT p.nome 
+FROM pessoas p 
+LEFT JOIN gafanhoto_assiste_curso g ON p.id = g.idgafanhoto 
+GROUP BY p.id 
+HAVING COUNT(DISTINCT g.idcurso) = (SELECT COUNT(*) FROM cursos);
+
+SELECT t.nome, t.total_cursos_feitos, t.total_cursos FROM (
+	SELECT 
+		p.nome, 
+        COUNT(g.idcurso) as total_cursos_feitos, 
+        (SELECT COUNT(*) FROM cursos) as total_cursos
+	FROM pessoas p 
+	LEFT JOIN gafanhoto_assiste_curso g ON p.id = g.idgafanhoto 
+	GROUP BY p.id 
+    order by p.nome 
+) AS t;
+# WHERE total_cursos_feitos = total_cursos;
+
+# Atualizar o ano de criação dos cursos antigos: 
+# Atualize o ano de todos os cursos criados antes de 2023 para 2024.
+update cursos c
+set c.ano = 2024
+where c.ano < 2023;
+
+# Verificar cursos assistidos por uma pessoa específica usando Subquery: 
+# Encontre os nomes dos cursos assistidos pela pessoa cujo nome é "Daniel", utilizando uma subquery.
+select p.nome, c.nome
+from pessoas p
+inner join gafanhoto_assiste_curso gac on gac.idgafanhoto = p.id
+inner join cursos c on c.idcurso = gac.idcurso
+where p.nome like '%Carlos%'
+group by c.nome;
+
+SELECT nome
+FROM cursos
+WHERE idcurso IN (
+    SELECT idcurso
+    FROM gafanhoto_assiste_curso
+    WHERE idgafanhoto IN (
+        SELECT id
+        FROM pessoas 
+        WHERE nome LIKE '%Daniel%'
+    )
+);
+
+SET profiling = 1;
+SHOW PROFILES; # Medir o tempo de execução da query
+
+# 1. Atualizar o nome de um aluno
+# Enunciado: Atualize o nome do aluno com id = 1 para "Carlos".
+update pessoas
+set nome = 'Carlos Morais'
+where id = 1;
+
+# Exibir cursos com carga horária maior que a média: 
+# Utilize uma subquery para listar os cursos cuja carga horária é maior do que a média de carga horária de todos os cursos.
+select nome, carga 
+from cursos
+where carga > (select avg(carga) from cursos)
+order by carga desc;
+
+# Contar cursos assistidos por uma pessoa em um ano específico: 
+# Usando uma subquery, conte o número de cursos assistidos pela pessoa cujo ID é 1 no ano de 2024.
+SELECT COUNT(*) 
+FROM gafanhoto_assiste_curso 
+WHERE idgafanhoto = 1 
+AND YEAR(data) = 2024;
+
+# Listar pessoas que assistiram ao curso com mais de 20 aulas: 
+# Utilize uma subquery para listar os nomes das pessoas que assistiram a cursos com mais de 20 aulas.
+select p.nome, c.nome, c.totaulas
+from pessoas p
+inner join gafanhoto_assiste_curso gac on gac.idgafanhoto = p.id
+inner join cursos c on gac.idcurso = c.idcurso
+where c.totaulas > 20
+group by p.nome
+order by p.nome;
